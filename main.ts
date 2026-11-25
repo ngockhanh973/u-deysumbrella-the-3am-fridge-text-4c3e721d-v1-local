@@ -1,28 +1,42 @@
-import * as fs from 'node:fs';
-import * as path from 'node:path';
+import * as fs from "node:fs";
+import * as path from "node:path";
 
-const LINE =
-  'Your leftovers from 2019 have outlived two phones, a relationship, and my warranty. Let them go.';
+// The fridge speaks at 3AM. One line, no more, no less.
+const LINE = "Your leftovers from 2019 have outlived two phones, a relationship, and my warranty. Let them go.";
 
-function pickFolder(): string {
-  const supplied = process.env.MAKEFUN_OUTPUT_DIR;
-  if (supplied !== undefined && supplied !== '') {
-    return supplied;
+// A line only counts if you can actually see something in it.
+function hasVisibleGlyph(text: string): boolean {
+  for (const ch of text) {
+    if (ch.trim().length > 0) {
+      return true;
+    }
   }
-  return path.resolve('out');
+  return false;
+}
+
+// The bounty allows a single short line: at least one character,
+// at most one hundred and forty, and never blank.
+function checkFridgeLine(text: string): void {
+  if (text.length < 1 || text.length > 140) {
+    throw new Error(`line must be 1..140 chars, got ${text.length}`);
+  }
+  if (!hasVisibleGlyph(text)) {
+    throw new Error("line must contain a visible character");
+  }
+}
+
+// Where the entry lands: the kit's output folder when set,
+// otherwise a plain out folder next to this file.
+function entryPath(): string {
+  const folder = process.env.MAKEFUN_OUTPUT_DIR ?? "out";
+  return path.join(folder, "entry.txt");
 }
 
 function main(): void {
-  // The gate only accepts 1 to 140 characters, and refuses a line that
-  // is only whitespace, so check both before writing anything.
-  if (LINE.length < 1 || LINE.length > 140 || LINE.trim().length === 0) {
-    throw new Error(
-      `entry runs ${LINE.length} characters; the gate only accepts 1 to 140`,
-    );
-  }
-  const folder = pickFolder();
-  fs.mkdirSync(folder, { recursive: true });
-  fs.writeFileSync(path.resolve(folder, 'entry.txt'), LINE, 'utf8');
+  checkFridgeLine(LINE);
+  const target = entryPath();
+  fs.mkdirSync(path.dirname(target), { recursive: true });
+  fs.writeFileSync(target, LINE, "utf8");
 }
 
 main();
